@@ -11,6 +11,10 @@ $(document).ready(function() {
     }
     $("#messages").append($("<li>").html("<b>" + message + "</b>"));
   });
+  socket.on("chat message", function(data){
+    $("#messages").append($("<li>").html("<b>" + data.name + ":" + data.message + "</b>"));
+
+  })
 
   // Form submittion with new message in field with id 'm'
   $("form").submit(function() {
