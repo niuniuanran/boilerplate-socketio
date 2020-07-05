@@ -13,7 +13,8 @@ const app = express();
 const http = require("http").Server(app);
 const sessionStore = new session.MemoryStore();
 const io = require("socket.io")(http);
-const cors = require('cors');
+const passportSocketIo = require("passport.socketio");
+const cors = require("cors");
 app.use(cors());
 
 fccTesting(app); //For FCC testing purposes
@@ -45,21 +46,27 @@ mongo.connect(process.env.DATABASE, (err, db) => {
     //start socket.io code
     let currentUsers = 0;
 
-    io.on("connection", socket => {
-        console.log("A user has connected");
-        ++currentUsers;
-        io.emit('user count', currentUsers);
+    io.use(
+        passportSocketIo.authorize({
+            cookieParser: cookieParser,
+            key: "express.sid",
+            secret: process.env.SESSION_SECRET,
+            store: sessionStore
+        })
+    );
 
-        socket.on('disconnect', (reason) => {
-            console.log("A user has disconnected");
+    io.on("connection", socket => {
+        ++currentUsers;
+        io.emit("user", {name: socket.request.user.name, currentUsers, connected: true});
+        console.log('user ' + socket.request.user.name + ' connected');
+
+        socket.on("disconnect", reason => {
+            console.log('user ' + socket.request.user.name + ' disconnected');
             console.log(reason);
             --currentUsers;
-            io.emit('user count', currentUsers);
+            io.emit("user", {name: socket.request.user.name, currentUsers, connected: false});
         });
-
-
     });
-
 
     //end socket.io code
 });
